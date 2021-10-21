@@ -41,10 +41,13 @@ abstract class Request implements RequestIF
 
     private function getPostFields()
     {
-        $vars = get_class_vars(static::class);
+        $reflection = new \ReflectionClass(static::class);
+        $vars = $reflection->getProperties(\ReflectionProperty::IS_PUBLIC);
         $fields = [];
 
-        foreach ($vars as $key => $value) {
+        foreach ($vars as $varReflection)
+        {
+            $key = $varReflection->name;
             $fields[$key] = $this->$key;
         }
 
