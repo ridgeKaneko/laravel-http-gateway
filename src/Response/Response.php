@@ -4,8 +4,11 @@
 namespace App\GatewayLib\Response;
 
 
+use App\GatewayLib\Dto\ResponseContext;
+use App\GatewayLib\Util;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Validator;
+use stdClass;
 
 abstract class Response implements ResponseIF
 {
@@ -16,27 +19,75 @@ abstract class Response implements ResponseIF
 
     private $__params = [];
 
-    private $__isTimeout;
-
-    private $__httpStatus;
-
-    private $__receivedTime;
+    private $__context;
 
     /**
      * @var \Illuminate\Contracts\Validation\Validator
      */
     private $__validator;
 
-    final public function __construct(string $contentBody,bool $isTimeout,int $httpStatus)
+    final public function __construct(ResponseContext $context)
     {
-        $this->__isTimeout = $isTimeout;
-        $this->__httpStatus = $httpStatus;
-        $this->params = static::decodeContentBody($contentBody);
+        $this->__context = $context;
+        $this->__params = static::decodeContentBody($context->body);
 
         $this->__validator = Validator::make($this->__params,static::RULES);
 
-        foreach ($this->__params as $key => $value) {
-            $this->$key = $value;
+        foreach ($this->__params as $key => $item) {
+            $this->$key = $this->parseItem($item);
+        }
+    }
+
+    /**
+     * 連想配列解析
+     *
+     * @param array $map
+     * @return stdClass
+     */
+    private function parseMap(array $map)
+    {
+        $obj = new stdClass();
+
+        foreach ($map as $key => $item)
+        {
+            $obj->$key = $this->parseItem($item);
+        }
+
+        return $obj;
+    }
+
+    /**
+     * 配列解析
+     *
+     * @param array $arr
+     * @return array
+     */
+    private function parseArray(array $arr)
+    {
+        return collect($arr)->map(function ($item) {
+            return $this->parseItem($item);
+        })->toArray();
+    }
+
+    /**
+     * 項目値解析
+     *
+     * @param $item
+     * @return array|stdClass
+     */
+    private function parseItem($item)
+    {
+        if (is_array($item))
+        {
+            if (Util::isMap($item)) {
+                return $this->parseMap($item);
+            }
+            else {
+                return $this->parseArray($item);
+            }
+        }
+        else {
+            return $item;
         }
     }
 
@@ -50,12 +101,12 @@ abstract class Response implements ResponseIF
 
     final public function isTimeout(): bool
     {
-        return $this->__isTimeout;
+        return $this->__context->isTimeout;
     }
 
     final public function httpStatus(): int
     {
-        return $this->__httpStatus;
+        return $this->__context->httpStatus;
     }
 
     final public function validate(): void
@@ -70,11 +121,6 @@ abstract class Response implements ResponseIF
 
     final public function receivedTime(): Carbon
     {
-        return $this->__receivedTime;
-    }
-
-    public function setReceivedTime(Carbon $time): void
-    {
-        $this->__receivedTime = $time;
+        return $this->__context->receivedTime;
     }
 }

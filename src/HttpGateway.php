@@ -4,6 +4,7 @@
 namespace App\GatewayLib;
 
 
+use App\GatewayLib\Dto\ResponseContext;
 use App\GatewayLib\Events\AfterReceiveResponse;
 use App\GatewayLib\Events\BeforeSendRequest;
 use App\GatewayLib\Exception\HttpGatewayException;
@@ -37,10 +38,15 @@ class HttpGateway
         //リクエスト送信
         $resBody = curl_exec($curl) ?: null;
 
+        $resCtx = new ResponseContext();
+        $resCtx->body = $resBody;
+        $resCtx->isTimeout = self::isTimeOut($curl);
+        $resCtx->httpStatus = self::getHttpStatus($curl);
+        $resCtx->curlErrNo = curl_errno($curl);
+        $resCtx->receivedTime = Carbon::now();
+
         //レスポンスモデル作成
-        $response = tap(new $resModelClass($resBody,self::isTimeOut($curl),self::getHttpStatus($curl)),function (ResponseIF $res) {
-            $res->setReceivedTime(Carbon::now());
-        });
+        $response = new $resModelClass($resCtx);
         event(new AfterReceiveResponse($request,$response));
 
         return $response;

@@ -4,6 +4,7 @@
 namespace App\GatewayLib\Response;
 
 
+use App\GatewayLib\Dto\ResponseContext;
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException;
 
@@ -11,19 +12,9 @@ interface ResponseIF
 {
     /**
      * レスポンス本文の内容を自身のオブジェクトに取り込み
-     *
-     * @param string $contentBody
-     * @param bool $isTimeout
-     * @param int $httpStatus
+     * @param ResponseContext $context
      */
-    public function __construct(string $contentBody,bool $isTimeout,int $httpStatus);
-
-    /**
-     * レスポンス取得時間設定
-     *
-     * @param Carbon $time
-     */
-    public function setReceivedTime(Carbon $time) : void;
+    public function __construct(ResponseContext $context);
 
     /**
      * レスポンス取得時間取得
